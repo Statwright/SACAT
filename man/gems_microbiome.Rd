@@ -19,8 +19,10 @@ before genus aggregation and filtering.}
 }
 }
 \source{
-The Bioconductor experiment data package \code{msd16s} (version 1.32.0),
-\doi{10.18129/B9.bioc.msd16s}.
+Counts and sample annotations were adapted from the Bioconductor data
+package \code{msd16s} (version 1.32.0) by Joseph N. Paulson, Hector Corrada
+Bravo, and Mihai Pop (\doi{10.18129/B9.bioc.msd16s}). The source package
+is distributed under the Artistic License 2.0.
 }
 \usage{
 data(gems_microbiome)
