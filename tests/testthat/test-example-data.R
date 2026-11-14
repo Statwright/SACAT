@@ -1,19 +1,23 @@
-test_that("the skin example preserves counts, metadata and full depths", {
+test_that("the GEMS example preserves age groups and full library sizes", {
     example <- new.env()
-    data("skin_microbiome", package = "SACAT", envir = example)
-    x <- example$skin_microbiome
-    expect_identical(dim(x$counts), c(674L, 58L))
-    expect_identical(colnames(x$counts), rownames(x$metadata))
-    expect_type(x$counts, "integer")
-    expect_true(all(x$counts >= 0))
-    expect_false(anyDuplicated(rownames(x$counts)) > 0L)
-    expect_false(anyNA(x$metadata))
-    expect_equal(x$metadata$library_size, unname(colSums(x$counts)))
-    expect_identical(levels(x$metadata$Diet), c("Veg", "Mixed"))
-    expect_identical(as.integer(table(x$metadata$Diet)), c(30L, 28L))
-    expect_identical(rownames(x$taxonomy), rownames(x$counts))
-    design <- stats::model.matrix(
-        ~ Gender + Age + Geographical_location + Diet, data = x$metadata
-    )
-    expect_identical(qr(design)$rank, ncol(design))
+    data("gems_microbiome", package = "SACAT", envir = example)
+    x <- example$gems_microbiome
+    counts <- SummarizedExperiment::assay(x, "counts")
+    samples <- as.data.frame(SummarizedExperiment::colData(x))
+
+    expect_s4_class(x, "SummarizedExperiment")
+    expect_identical(dim(counts), c(41L, 328L))
+    expect_identical(colnames(counts), rownames(samples))
+    expect_true(all(counts >= 0 & counts == floor(counts)))
+    expect_true(all(rowMeans(counts > 0) >= 0.20))
+    expect_true(all(samples$reads > colSums(counts)))
+    expect_identical(levels(samples$group), c("Infant", "Older"))
+    expect_identical(as.integer(table(samples$group)), c(191L, 137L))
+    age_range <- function(group) {
+        range(samples$age_months[samples$group == group])
+    }
+    expect_equal(age_range("Infant"), c(1, 11))
+    expect_equal(age_range("Older"), c(24, 58))
+    expect_identical(nlevels(samples$country), 4L)
+    expect_false(anyNA(samples))
 })

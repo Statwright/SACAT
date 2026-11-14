@@ -97,9 +97,7 @@ It does not refit the model or change statistical results.
 }
 \examples{
 example("sacat", echo = FALSE)
-profiles <- fit$plot_data$profiles
-shown <- profiles$feature[profiles$structural_status == "ok" &
-                          profiles$abundance_status == "ok"]
-plot(fit, features = head(shown, 3L))
+plot(fit, features = c("Haemophilus", "Lactobacillus", "Faecalibacterium"),
+     group_labels = c("1-11 mo", "24-58 mo"))
 
 }

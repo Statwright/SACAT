@@ -42,137 +42,102 @@ library(SACAT)
 library(SummarizedExperiment)
 ```
 
-# Prepare the data
+# The GEMS age comparison
 
-The bundled `skin_microbiome` data contain 16S counts and metadata from
-58 unrelated participants in Potbhare et al. (2022), prepared from the
-`mia` dataset `peerj13075`. We compare the recorded mixed (`Mixed`) and
-vegetarian (`Veg`) diet groups, adjusting for gender, age group, and location.
+The Global Enteric Multicenter Study collected stool samples from children
+with diarrhea and controls without diarrhea. Here we use controls from
+Bangladesh, The Gambia, Kenya, and Mali to compare 191 infants aged 1–11
+months with 137 children aged 24–58 months.
 
 ```{r example-data}
-data("skin_microbiome", package = "SACAT")
-counts_all <- skin_microbiome$counts
-metadata <- skin_microbiome$metadata
-dim(counts_all)
-table(metadata$Diet)
+data("gems_microbiome", package = "SACAT")
+dim(gems_microbiome)
+table(gems_microbiome$group)
 ```
 
-Counts must be nonnegative integers, with taxa in rows and samples in
-columns. Metadata row names must match sample names. Use complete values for
-the binary group and adjustment variables. The formula requires an additive
-group effect; group interactions, offsets, and random effects are unsupported.
-
-The bundled library sizes are totals from the full released count table.
-Preserve them when selecting taxa. For your own data, retain the original
-sequencing depths and supply raw counts without pseudocounts or normalization.
-
-```{r full-library-sizes}
-full_depth <- colSums(counts_all)
-stopifnot(
-    identical(colnames(counts_all), rownames(metadata)),
-    all(metadata$library_size == full_depth)
-)
-```
-
-Select the 20 taxa detected in the most samples, breaking ties by name.
-These taxa define the feature set for this example's tests and abundance
-reference.
-
-```{r select-features}
-selected <- order(-rowSums(counts_all > 0), rownames(counts_all))[seq_len(20L)]
-se <- SummarizedExperiment(
-    assays = list(counts = counts_all[selected, , drop = FALSE]),
-    colData = metadata
-)
-se
-```
+The `counts` assay contains raw 16S counts for the 41 named bacterial genera
+detected in at least 20% of the 328 children. The `reads` column in
+`colData(gems_microbiome)` gives each sample's library size from the full
+count table, before genus selection. Use this original depth when fitting
+a subset of taxa.
 
 # Fit and inspect the results
 
-`sacat_se()` extracts the count assay and `colData()` from the container.
-Set `reference = "Veg"` for a mixed-minus-vegetarian comparison. This call
-fits both components using the default numerical settings and retains plot
-data. `sacat(counts, metadata, ...)` provides the equivalent matrix interface.
+The model compares older children with infants while adjusting for country.
+`sacat_se()` reads the counts and sample annotations from the
+`SummarizedExperiment`. Use `sacat()` for a count matrix and metadata frame.
 
 ```{r fit-model}
 fit <- sacat_se(
-    se,
-    formula = ~ Gender + Age + Geographical_location + Diet,
-    group = "Diet",
-    reference = "Veg",
-    library_size = "library_size",
-    assay = "counts",
+    gems_microbiome,
+    formula = ~ country + group,
+    group = "group",
+    reference = "Infant",
+    library_size = "reads",
     store_plot_data = TRUE
 )
 fit
 ```
 
+We can inspect the adjusted p-values for three genera after fitting all 41.
+Each column uses BH adjustment across the full set of genera.
+
 ```{r primary-results}
-result_columns <- c(
-    "taxon", "p_adj_structural_absence", "p_adj_relative_abundance",
-    "p_adj_omnibus", "estimate_relative_abundance"
+genera <- c("Haemophilus", "Lactobacillus", "Faecalibacterium")
+columns <- c("p_adj_structural_absence", "p_adj_relative_abundance",
+             "p_adj_omnibus")
+rows <- match(genera, fit$results$taxon)
+p_values <- fit$results[rows, columns]
+p_values[] <- lapply(p_values, function(p) sprintf("%.3g", p))
+knitr::kable(
+    data.frame(Genus = genera, p_values),
+    col.names = c("Genus", "SA", "RA", "Omnibus"),
+    row.names = FALSE
 )
-knitr::kable(fit$results[, result_columns], digits = 4, row.names = FALSE)
 ```
 
-Positive SA statistics indicate greater absence in the comparison group.
-Positive RA estimates indicate a present-conditional log-abundance contrast
-above the cross-taxon reference. The omnibus result combines component
-evidence; inspect the separate SA and RA columns to interpret an association.
-
-Retained taxa with an unavailable component receive an operational p-value
-of one in that family. Taxa excluded by the initial positive-count filter
-have missing results. Diagnostics explain component availability and warnings:
-
-```{r component-diagnostics}
-diagnostic_columns <- c(
-    "taxon", "reason_structural_absence", "reason_relative_abundance"
-)
-knitr::kable(head(fit$diagnostics[, diagnostic_columns]), row.names = FALSE)
-```
+In older children, *Haemophilus* showed evidence of lower structural absence
+(SA only). *Lactobacillus* showed lower relative abundance conditional on
+presence (RA only). For *Faecalibacterium*, older children had both lower
+structural absence and higher relative abundance conditional on presence.
+The omnibus test detected all three associations. For other genera,
+`fit$results` provides the effect estimates and p-values, and
+`fit$diagnostics` reports test availability and numerical warnings.
 
 # Plot the association profile
 
-Show three taxa with available fitted profiles. The plot uses the summaries
-stored in the fitted object.
-
-```{r association-profile, dev="svg", fig.width=11, fig.height=5.5, out.width="100%", fig.cap="SACAT profile for three taxa. BH adjustment uses the full retained tutorial feature set."}
-profiles <- fit$plot_data$profiles
-shown <- profiles$feature[profiles$structural_status == "ok" &
-                          profiles$abundance_status == "ok"]
-plot(fit, features = head(shown, 3L),
-     group_labels = c("Vegetarian", "Mixed diet"))
+```{r association-profile, dev="svg", fig.width=11.3, fig.height=4.8, out.width="100%"}
+plot(fit, features = genera, group_labels = c("1-11 mo", "24-58 mo"))
 ```
 
-**A: Component evidence.** Signed SA and RA statistics; filled markers
-indicate component discoveries. BH boundaries use the complete retained
-families, and taxon superscripts summarize omnibus adjusted p-values.
+**A. Component evidence.** Filled points mark BH-adjusted p-values at or
+below 0.05. Positive signed statistics indicate higher structural absence
+or higher reference-adjusted conditional abundance in older children.
+Stars beside the genus names summarize the adjusted omnibus p-values.
 
-**B: Detection and zero sources.** Observed detection and model-estimated
-SA and nondetection (ND) shares sum to one in each group. The zero-source
-shares average posterior probabilities over all samples in the observed
-group, using a descriptive structural fit with group and covariate effects.
+**B. Detection and zero sources.** The blue portion gives the fraction of
+children in whom the genus was detected. The other two portions divide the
+observed zeros between estimated structural absence (SA) and nondetection
+despite presence (ND), using fitted probabilities.
 
-**C: Abundance.** Positive observed counts divided by full library sizes,
-expressed as percentages on a log scale. Diamonds show exponentiated mean
-fitted log relative abundance conditional on presence, standardized over all
-covariate profiles. The raw abundance contrast is the natural log of the ratio
-of the comparison-group diamond to the reference-group diamond. The RA test
-subtracts the estimated cross-taxon reference from this contrast.
+**C. Abundance.** Each point is a positive observed count divided by that
+sample's full library size, expressed as a percentage. Diamonds show fitted
+abundance conditional on presence, obtained by averaging fitted log abundance
+over the same country profiles for each age group and exponentiating. The
+log ratio of the diamonds gives the raw abundance contrast. The RA test
+centers this contrast against the reference estimated from other genera.
 
-See `?sacat`, `?sacat_se`, and `?plot.sacat` for all arguments. Request
-`full_output = TRUE` for detailed fits and additional numerical diagnostics.
+# Data source and session information
 
-# References and session information
+Pop M, Walker AW, Paulson J, et al. (2014). Diarrhea in young children from
+low-income countries leads to large-scale alterations in intestinal microbiota
+composition. *Genome Biology* **15**, R76. [Study][gems-paper]
 
-Potbhare R, RaviKumar A, Munukka E, Lahti L, and Ashma R (2022). Skin microbiota
-diversity among genetically unrelated individuals of Indian origin.
-*PeerJ* **10**, e13075. [doi:10.7717/peerj.13075](https://doi.org/10.7717/peerj.13075).
-The count table is [Supplemental Information 1](https://doi.org/10.7717/peerj.13075/supp-1).
-The article and supplements are published under
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-The [mia dataset documentation](https://microbiome.github.io/mia/reference/peerj13075.html)
-and `?skin_microbiome` describe the data and its preparation.
+The counts and sample annotations come from the Bioconductor experiment data
+package [msd16s][gems-data]. See `?gems_microbiome` for the selection criteria.
+
+[gems-paper]: https://doi.org/10.1186/gb-2014-15-6-r76
+[gems-data]: https://bioconductor.org/packages/msd16s/
 
 ```{r session-info}
 session <- sessionInfo()

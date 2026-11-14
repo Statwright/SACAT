@@ -36,45 +36,40 @@ columns. Sample names must match the metadata row names. When selecting
 taxa, keep each sample's original library size. SACAT requires a binary
 group and complete values for the variables used in the analysis.
 
-The bundled `skin_microbiome` data contain raw 16S counts and metadata from
-58 participants in [Potbhare et al. (2022)](https://doi.org/10.7717/peerj.13075).
-This small example compares the recorded diet groups while adjusting for
-gender, age group, and location. It selects 20 taxa by pooled positive-count
-support and retains the library sizes from the full count table.
+The bundled `gems_microbiome` dataset contains stool 16S counts for
+328 children without diarrhea in the Global Enteric Multicenter Study.
+We compare 191 infants aged 1–11 months with 137 children aged 24–58 months,
+adjusting for country. The analysis includes all 41 named bacterial genera
+detected in at least 20% of these children. [Pop et al. (2014)][gems-paper]
 
 ```r
 library(SACAT)
-library(SummarizedExperiment)
-data("skin_microbiome")
-
-counts <- skin_microbiome$counts
-selected <- order(-rowSums(counts > 0), rownames(counts))[seq_len(20L)]
-se <- SummarizedExperiment(
-    assays = list(counts = counts[selected, , drop = FALSE]),
-    colData = skin_microbiome$metadata
-)
+data("gems_microbiome", package = "SACAT")
 
 fit <- sacat_se(
-    se,
-    formula = ~ Gender + Age + Geographical_location + Diet,
-    group = "Diet",
-    reference = "Veg",
-    library_size = "library_size",
-    assay = "counts",
+    gems_microbiome,
+    formula = ~ country + group,
+    group = "group",
+    reference = "Infant",
+    library_size = "reads",
     store_plot_data = TRUE
 )
-
 fit
-head(fit$results)
-profiles <- fit$plot_data$profiles
-shown <- profiles$feature[profiles$structural_status == "ok" &
-                          profiles$abundance_status == "ok"]
-plot(fit, features = head(shown, 3L))
+
+genera <- c("Haemophilus", "Lactobacillus", "Faecalibacterium")
+plot(fit, features = genera, group_labels = c("1-11 mo", "24-58 mo"))
 ```
 
-In this example, positive signed statistics indicate higher SA or
-reference-corrected RA in the mixed-diet group. Adjusted p-values are in
-`fit$results` and reasons for unavailable tests are in `fit$diagnostics`.
+![Component tests, detection and abundance for three GEMS genera][gems-plot]
+
+In older children, *Haemophilus* showed evidence of lower structural absence
+(SA only), *Lactobacillus* of lower abundance conditional on presence
+(RA only), and *Faecalibacterium* of both lower absence and higher abundance.
+The three rows come from the same fit, with BH adjustment across all 41 genera
+for each test.
+
+[gems-paper]: https://doi.org/10.1186/gb-2014-15-6-r76
+[gems-plot]: man/figures/gems-age-profile.png
 
 For a count matrix and a metadata frame, use `sacat()` directly.
 

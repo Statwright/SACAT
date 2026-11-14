@@ -196,19 +196,17 @@ analyses include \code{warning_relative_abundance}. Setting \code{full_output = 
 additionally retains detailed fitted objects and reference diagnostics.
 }
 \examples{
-data("skin_microbiome")
-counts <- skin_microbiome$counts
-support <- rowSums(counts > 0)
-selected <- order(-support, rownames(counts))[seq_len(12L)]
+data("gems_microbiome")
 fit <- sacat(
-    counts = counts[selected, , drop = FALSE],
-    metadata = skin_microbiome$metadata,
-    formula = ~ Gender + Age + Geographical_location + Diet,
-    group = "Diet",
-    reference = "Veg",
-    library_size = "library_size",
+    counts = SummarizedExperiment::assay(gems_microbiome, "counts"),
+    metadata = as.data.frame(SummarizedExperiment::colData(gems_microbiome)),
+    formula = ~ country + group,
+    group = "group", reference = "Infant", library_size = "reads",
     store_plot_data = TRUE
 )
-head(fit$results)
+genera <- c("Haemophilus", "Lactobacillus", "Faecalibacterium")
+fit$results[match(genera, fit$results$taxon),
+            c("taxon", "p_adj_structural_absence", "p_adj_relative_abundance",
+              "p_adj_omnibus")]
 
 }

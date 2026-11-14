@@ -1,46 +1,40 @@
-#' Skin microbiome counts and sample metadata
+#' Gut microbiome profiles from children in the GEMS study
 #'
-#' Bacterial count profiles from axillary skin samples of 58 individuals in
-#' Maharashtra, India, reported by Potbhare et al. (2022).
+#' Stool 16S rRNA gene counts from diarrhea-free control children in the
+#' Global Enteric Multicenter Study (GEMS), reported by Pop et al. (2014).
 #'
-#' @format A list with three elements:
-#' \describe{
-#'   \item{counts}{An integer matrix with 674 microbial features in rows and
-#'     58 samples in columns. Row names are the published feature identifiers.}
-#'   \item{metadata}{A data frame aligned with the columns of `counts`:
-#'     `Sample` (sample identifier); `Geographical_location`
-#'     (`Ahmednagar`, `Nashik`, or `Pune`); `Gender` (`Female` or `Male`);
-#'     `Age` (`Adult`, `Middle_age`, or `Elderly`); `Diet`
-#'     (`Veg`, the reference level, or `Mixed`); and `library_size`
-#'     (the sample total across all 674 published count features).}
-#'   \item{taxonomy}{A data frame aligned with the rows of `counts`, with
-#'     `kingdom`, `phylum`, `class`, `order`, `family`, and `genus` assignments.}
-#' }
+#' @format A [SummarizedExperiment::SummarizedExperiment-class] with
+#'   41 bacterial genera in rows and 328 children in columns.
+#'   The `counts` assay contains raw genus-level read counts.
+#'   Sample metadata in `colData()` contain:
+#'   \describe{
+#'     \item{`group`}{Age group: `Infant` (1--11 months, 191 children)
+#'       or `Older` (24--58 months, 137 children).}
+#'     \item{`age_months`}{Age in months.}
+#'     \item{`country`}{Study country: Bangladesh, The Gambia, Kenya or Mali.}
+#'     \item{`reads`}{Total reads for the sample in the original count table,
+#'       before genus aggregation and filtering.}
+#'   }
 #'
 #' @details
-#' The dataset contains 30 participants with vegetarian diets and 28 with mixed
-#' diets. Counts and taxonomy are retained from the `peerj13075` example in
-#' mia 1.20.0. Sample annotations are stored as factors, with vegetarian diet
-#' as the reference level. Library sizes are calculated from the complete
-#' published count table before selecting features for examples.
-#'
-#' Preparation code is provided in `inst/scripts/prepare_skin_microbiome.R` in the source
-#' repository. The study data are distributed under the Creative Commons
-#' Attribution 4.0 International license.
+#' The example includes controls younger than 12 months or at least 24
+#' months old. Counts were summed across features with the same bacterial
+#' genus name. Genera detected in at least 20% of the selected children
+#' were retained. The preparation script is installed under
+#' `scripts/prepare_gems_microbiome.R`.
 #'
 #' @source
-#' Potbhare et al. (2022), \doi{10.7717/peerj.13075}; distributed as
-#' `peerj13075` in mia 1.20.0, \doi{10.18129/B9.bioc.mia}.
-#' Data license: \url{https://creativecommons.org/licenses/by/4.0/}.
+#' The Bioconductor experiment data package `msd16s` (version 1.32.0),
+#' \doi{10.18129/B9.bioc.msd16s}.
 #'
 #' @references
-#' Potbhare R, RaviKumar A, Munukka E, Lahti L, Ashma R (2022).
-#' Skin microbiota diversity among genetically unrelated individuals of
-#' Indian origin. PeerJ, 10, e13075. \doi{10.7717/peerj.13075}.
+#' Pop M, Walker AW, Paulson JN, et al. (2014). Diarrhea in young children
+#' from low-income countries leads to large-scale alterations in intestinal
+#' microbiota composition. Genome Biology, 15, R76.
+#' \doi{10.1186/gb-2014-15-6-r76}.
 #'
 #' @examples
-#' data("skin_microbiome")
-#' dim(skin_microbiome$counts)
-#' table(skin_microbiome$metadata$Diet)
-#' head(skin_microbiome$taxonomy)
-"skin_microbiome"
+#' data("gems_microbiome")
+#' dim(gems_microbiome)
+#' table(gems_microbiome$group, gems_microbiome$country)
+"gems_microbiome"

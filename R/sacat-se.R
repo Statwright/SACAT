@@ -31,18 +31,15 @@
 #' @return A `sacat` object, as returned by [sacat()].
 #' @seealso [sacat()], [SummarizedExperiment::SummarizedExperiment]
 #' @examples
-#' data("skin_microbiome")
-#' taxa <- c("OTU1680", "OTU1893")
-#' object <- SummarizedExperiment::SummarizedExperiment(
-#'     assays = list(counts = skin_microbiome$counts[taxa, , drop = FALSE]),
-#'     colData = skin_microbiome$metadata
-#' )
+#' data("gems_microbiome")
+#' genera <- c("Haemophilus", "Lactobacillus", "Faecalibacterium")
 #' fit <- sacat_se(
-#'     object, ~ Gender + Age + Geographical_location + Diet,
-#'     group = "Diet", reference = "Veg", library_size = "library_size",
+#'     gems_microbiome[genera, ], ~ country + group,
+#'     group = "group", reference = "Infant", library_size = "reads",
 #'     component = "structural_absence"
 #' )
 #' fit$results[, c("taxon", "p_structural_absence")]
+#' @importClassesFrom SummarizedExperiment SummarizedExperiment
 #' @export
 sacat_se <- function(object, formula, group, library_size,
                      assay = "counts", ...) {
