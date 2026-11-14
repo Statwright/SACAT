@@ -1,0 +1,47 @@
+Package: SACAT
+Type: Package
+Title: Structural-Absence and Conditional-Abundance Testing
+Version: 0.99.0
+Authors@R:
+    c(
+        person("Yiqian", "Zhang", email = "zhang.16383@osu.edu",
+               role = c("aut", "cre")),
+        person("Zihan", "Zhu", email = "zihan.zhu@yale.edu",
+               role = "aut")
+    )
+URL: https://github.com/Statwright/SACAT
+BugReports: https://github.com/Statwright/SACAT/issues
+Description: Provides depth-aware taxon-level inference for microbiome count
+    data. SACAT separates group differences in structural-absence probability
+    from differences in mean log relative abundance among samples in which a
+    taxon is present. It accounts for finite-depth nondetection, centers
+    abundance effects against a target-excluded cross-taxon reference, reports
+    component-specific and omnibus tests, and visualizes statistical evidence,
+    observed detection, estimated zero sources, and abundance distributions.
+License: GPL (>= 3) + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.6.0)
+Imports:
+    graphics,
+    grDevices,
+    grid,
+    parallel,
+    Rcpp,
+    SummarizedExperiment,
+    statmod,
+    stats,
+    utils
+LinkingTo:
+    Rcpp
+Suggests:
+    BiocStyle,
+    knitr,
+    rmarkdown,
+    testthat (>= 3.2.0)
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+NeedsCompilation: yes
+Config/roxygen2/version: 8.1.0
+VignetteBuilder: knitr
+biocViews: Microbiome, Metagenomics, DifferentialExpression, Regression,
+    StatisticalMethod, Visualization

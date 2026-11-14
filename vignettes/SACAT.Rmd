@@ -1,0 +1,183 @@
+---
+title: "Structural-absence and conditional-abundance testing with SACAT"
+author:
+  - name: Yiqian Zhang
+  - name: Zihan Zhu
+package: SACAT
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_depth: 2
+vignette: >
+  %\VignetteIndexEntry{Structural-absence and conditional-abundance testing with SACAT}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", message = FALSE)
+```
+
+# Overview
+
+SACAT analyzes microbiome counts to separate evidence for differences in
+structural absence (SA) from differences in relative abundance conditional
+on presence (RA). Sequencing depth enters the model because a zero can
+reflect either absence or nondetection. RA effects are standardized over
+covariates and centered against a reference from other eligible taxa.
+The primary omnibus p-value is `min(1, 2 * min(p_SA, p_RA))`.
+Benjamini–Hochberg (BH) adjustment is applied separately to each result family.
+
+# Installation
+
+Install SACAT from GitHub using R 4.6.0 or later and a C++ compiler.
+
+```{r installation, eval=FALSE}
+install.packages(c("BiocManager", "remotes"))
+BiocManager::install("Statwright/SACAT")
+```
+
+```{r packages}
+library(SACAT)
+library(SummarizedExperiment)
+```
+
+# Prepare the data
+
+The bundled `skin_microbiome` data contain 16S counts and metadata from
+58 unrelated participants in Potbhare et al. (2022), prepared from the
+`mia` dataset `peerj13075`. We compare the recorded mixed (`Mixed`) and
+vegetarian (`Veg`) diet groups, adjusting for gender, age group, and location.
+
+```{r example-data}
+data("skin_microbiome", package = "SACAT")
+counts_all <- skin_microbiome$counts
+metadata <- skin_microbiome$metadata
+dim(counts_all)
+table(metadata$Diet)
+```
+
+Counts must be nonnegative integers, with taxa in rows and samples in
+columns. Metadata row names must match sample names. Use complete values for
+the binary group and adjustment variables. The formula requires an additive
+group effect; group interactions, offsets, and random effects are unsupported.
+
+The bundled library sizes are totals from the full released count table.
+Preserve them when selecting taxa. For your own data, retain the original
+sequencing depths and supply raw counts without pseudocounts or normalization.
+
+```{r full-library-sizes}
+full_depth <- colSums(counts_all)
+stopifnot(
+    identical(colnames(counts_all), rownames(metadata)),
+    all(metadata$library_size == full_depth)
+)
+```
+
+Select the 20 taxa detected in the most samples, breaking ties by name.
+These taxa define the feature set for this example's tests and abundance
+reference.
+
+```{r select-features}
+selected <- order(-rowSums(counts_all > 0), rownames(counts_all))[seq_len(20L)]
+se <- SummarizedExperiment(
+    assays = list(counts = counts_all[selected, , drop = FALSE]),
+    colData = metadata
+)
+se
+```
+
+# Fit and inspect the results
+
+`sacat_se()` extracts the count assay and `colData()` from the container.
+Set `reference = "Veg"` for a mixed-minus-vegetarian comparison. This call
+fits both components using the default numerical settings and retains plot
+data. `sacat(counts, metadata, ...)` provides the equivalent matrix interface.
+
+```{r fit-model}
+fit <- sacat_se(
+    se,
+    formula = ~ Gender + Age + Geographical_location + Diet,
+    group = "Diet",
+    reference = "Veg",
+    library_size = "library_size",
+    assay = "counts",
+    store_plot_data = TRUE
+)
+fit
+```
+
+```{r primary-results}
+result_columns <- c(
+    "taxon", "p_adj_structural_absence", "p_adj_relative_abundance",
+    "p_adj_omnibus", "estimate_relative_abundance"
+)
+knitr::kable(fit$results[, result_columns], digits = 4, row.names = FALSE)
+```
+
+Positive SA statistics indicate greater absence in the comparison group.
+Positive RA estimates indicate a present-conditional log-abundance contrast
+above the cross-taxon reference. The omnibus result combines component
+evidence; inspect the separate SA and RA columns to interpret an association.
+
+Retained taxa with an unavailable component receive an operational p-value
+of one in that family. Taxa excluded by the initial positive-count filter
+have missing results. Diagnostics explain component availability and warnings:
+
+```{r component-diagnostics}
+diagnostic_columns <- c(
+    "taxon", "reason_structural_absence", "reason_relative_abundance"
+)
+knitr::kable(head(fit$diagnostics[, diagnostic_columns]), row.names = FALSE)
+```
+
+# Plot the association profile
+
+Show three taxa with available fitted profiles. The plot uses the summaries
+stored in the fitted object.
+
+```{r association-profile, dev="svg", fig.width=11, fig.height=5.5, out.width="100%", fig.cap="SACAT profile for three taxa. BH adjustment uses the full retained tutorial feature set."}
+profiles <- fit$plot_data$profiles
+shown <- profiles$feature[profiles$structural_status == "ok" &
+                          profiles$abundance_status == "ok"]
+plot(fit, features = head(shown, 3L),
+     group_labels = c("Vegetarian", "Mixed diet"))
+```
+
+**A: Component evidence.** Signed SA and RA statistics; filled markers
+indicate component discoveries. BH boundaries use the complete retained
+families, and taxon superscripts summarize omnibus adjusted p-values.
+
+**B: Detection and zero sources.** Observed detection and model-estimated
+SA and nondetection (ND) shares sum to one in each group. The zero-source
+shares average posterior probabilities over all samples in the observed
+group, using a descriptive structural fit with group and covariate effects.
+
+**C: Abundance.** Positive observed counts divided by full library sizes,
+expressed as percentages on a log scale. Diamonds show exponentiated mean
+fitted log relative abundance conditional on presence, standardized over all
+covariate profiles. The raw abundance contrast is the natural log of the ratio
+of the comparison-group diamond to the reference-group diamond. The RA test
+subtracts the estimated cross-taxon reference from this contrast.
+
+See `?sacat`, `?sacat_se`, and `?plot.sacat` for all arguments. Request
+`full_output = TRUE` for detailed fits and additional numerical diagnostics.
+
+# References and session information
+
+Potbhare R, RaviKumar A, Munukka E, Lahti L, and Ashma R (2022). Skin microbiota
+diversity among genetically unrelated individuals of Indian origin.
+*PeerJ* **10**, e13075. [doi:10.7717/peerj.13075](https://doi.org/10.7717/peerj.13075).
+The count table is [Supplemental Information 1](https://doi.org/10.7717/peerj.13075/supp-1).
+The article and supplements are published under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+The [mia dataset documentation](https://microbiome.github.io/mia/reference/peerj13075.html)
+and `?skin_microbiome` describe the data and its preparation.
+
+```{r session-info}
+session <- sessionInfo()
+for (field in intersect(c("BLAS", "LAPACK"), names(session))) {
+    session[[field]] <- basename(session[[field]])
+}
+print(session)
+```

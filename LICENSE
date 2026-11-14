@@ -1,0 +1,14 @@
+SACAT source code is licensed under the GNU General Public License,
+version 3 or later.
+
+The skin_microbiome example data are adapted from the count table and
+metadata released with:
+Potbhare R, RaviKumar A, Munukka E, Lahti L, Ashma R (2022).
+Skin microbiota diversity among genetically unrelated individuals of
+Indian origin. PeerJ 10:e13075. https://doi.org/10.7717/peerj.13075
+
+These data retain their Creative Commons Attribution 4.0 International
+license: https://creativecommons.org/licenses/by/4.0/.
+The packaged data preserve the released counts and include simplified
+metadata, taxonomy, and full-table library sizes. Preparation is documented
+in inst/scripts/prepare_skin_microbiome.R and the skin_microbiome help page.
