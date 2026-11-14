@@ -24,7 +24,6 @@ Useful links:
 Authors:
 \itemize{
   \item Yiqian Zhang \email{zhang.16383@osu.edu}
-  \item Zihan Zhu \email{zihan.zhu@yale.edu}
 }
 
 }

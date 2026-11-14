@@ -3,12 +3,8 @@ Type: Package
 Title: Structural-Absence and Conditional-Abundance Testing
 Version: 0.99.0
 Authors@R:
-    c(
-        person("Yiqian", "Zhang", email = "zhang.16383@osu.edu",
-               role = c("aut", "cre")),
-        person("Zihan", "Zhu", email = "zihan.zhu@yale.edu",
-               role = "aut")
-    )
+    person("Yiqian", "Zhang", email = "zhang.16383@osu.edu",
+           role = c("aut", "cre"))
 URL: https://github.com/Statwright/SACAT
 BugReports: https://github.com/Statwright/SACAT/issues
 Description: Provides depth-aware taxon-level inference for microbiome count
